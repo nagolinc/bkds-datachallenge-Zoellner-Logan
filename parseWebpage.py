@@ -2,19 +2,33 @@ from html.parser import HTMLParser
 
 # create a subclass and override the handler methods
 class MyHTMLParser(HTMLParser):
-    def handle_starttag(self, tag, attrs):
-        print "Encountered a start tag:", tag
 
-    def handle_endtag(self, tag):
-        print "Encountered an end tag :", tag
+	def __init__(self):
+		HTMLParser.__init__(self)
+		self.rooms = set()
 
-    def handle_data(self, data):
-        print "Encountered some data  :", data
+	def handle_starttag(self, tag, attrs):
+		#print( "Encountered a start tag:", tag,attrs)
+		ad=dict(attrs)
+		if tag=="a" and 'href' in ad and "/rooms/" in ad['href'] and "?s=" in ad['href']:
+			print(ad['href'])
+			href=ad['href']
+			room=href[7:href.index("?s=")]
+			self.rooms.add(room)
 
+	def handle_endtag(self, tag):
+		#print "Encountered an end tag :", tag
+		pass
+
+	def handle_data(self, data):
+		#print "Encountered some data  :", data
+		pass
+
+'''
 # instantiate the parser and fed it some HTML
 parser = MyHTMLParser()
 parser.feed('<html><head><title>Test</title></head>'
-            '<body><h1>Parse me!</h1></body></html>')
+			'<body><h1>Parse me!</h1></body></html>')
 
 
 import urllib
@@ -53,9 +67,11 @@ data = resp.read().decode('utf-8')
 print(data)
 
 
-
+'''
 
 #keep trying
+
+url='https://www.airbnb.com/s/New-York--NY'
 
 from urllib.request import Request, urlopen
 
@@ -65,10 +81,11 @@ webpage = urlopen(req).read()
 #so this is the magic incantation!
 
 
+parser = MyHTMLParser()
+parser.feed(webpage.decode("utf8"))
 
 
-
-
+#and now we need to build a parser for each of the rooms
 
 
 
