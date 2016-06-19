@@ -87,12 +87,38 @@ parser.feed(webpage.decode("utf8"))
 
 #and now we need to build a parser for each of the rooms
 
+class ParseRoom(HTMLParser):
+
+	def __init__(self):
+		HTMLParser.__init__(self)
+		self.mode="NONE"
+		self.price=None
+
+	def handle_starttag(self, tag, attrs):
+		#print( "Encountered a start tag:", tag,attrs)
+		ad=dict(attrs)
+		if tag=="div" and 'class' in ad and "book-it__price-amount":
+			self.mode="LOOKING_FOR_PRICE0"
+		if self.mode=="LOOKING_FOR_PRICE0" and tag=='span':
+			self.mode="LOOKING_FOR_PRICE1"
+
+	def handle_endtag(self, tag):
+		#print "Encountered an end tag :", tag
+		if self.mode=="LOOKING_FOR_PRICE1":
+			self.mode="NONE"
+		
+	def handle_data(self, data):
+		#print "Encountered some data  :", data
+		if self.mode=="LOOKING_FOR_PRICE1" and "$" in data:
+			self.price=float(data[1:])
+			self.mode="NONE"
 
 
-
-
-
-
+url2='https://www.airbnb.com/rooms/12836344'
+req = Request(url2, headers={'User-Agent': 'Mozilla/5.0'})
+webpage = urlopen(req).read()
+roomParser = ParseRoom()
+roomParser.feed(webpage.decode("utf8"))
 
 
 
