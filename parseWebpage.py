@@ -1,8 +1,10 @@
 from html.parser import HTMLParser
 import json
 
+from urllib.request import Request, urlopen
+
 # create a subclass and override the handler methods
-class MyHTMLParser(HTMLParser):
+class CityPageParser(HTMLParser):
 
 	def __init__(self):
 		HTMLParser.__init__(self)
@@ -12,7 +14,7 @@ class MyHTMLParser(HTMLParser):
 		#print( "Encountered a start tag:", tag,attrs)
 		ad=dict(attrs)
 		if tag=="a" and 'href' in ad and "/rooms/" in ad['href'] and "?s=" in ad['href']:
-			print(ad['href'])
+			#print(ad['href'])
 			href=ad['href']
 			room=href[7:href.index("?s=")]
 			self.rooms.add(room)
@@ -25,68 +27,8 @@ class MyHTMLParser(HTMLParser):
 		#print "Encountered some data  :", data
 		pass
 
-'''
-# instantiate the parser and fed it some HTML
-parser = MyHTMLParser()
-parser.feed('<html><head><title>Test</title></head>'
-			'<body><h1>Parse me!</h1></body></html>')
 
 
-import urllib
-
-url='https://www.airbnb.com/s/New-York--NY'
-
-
-
-
-urlOpened=urllib.request.urlopen(request)
-#didn't work, try client?
-
-
-import http.client
-
-#conn = http.client.HTTPSConnection('www.yande.re')
-#conn.request('GET', 'https://yande.re/')
-conn = http.client.HTTPSConnection('www.airbnb.com')
-conn.request('GET', 'https://www.airbnb.com/s/New-York--NY')
-
-resp = conn.getresponse()
-data = resp.read()
-
-#didn't work either...
-
-import urllib.request
-import ssl
-
-#https_sslv3_handler =  urllib.request.HTTPSHandler(context=ssl.SSLContext(ssl.PROTOCOL_SSLv3))
-
-https_sslv3_handler =  urllib.request.HTTPSHandler(context=ssl.SSLContext(ssl.PROTOCOL_TLSv1_2))
-opener = urllib.request.build_opener(https_sslv3_handler,headers={'User-Agent': 'Mozilla/5.0'})
-urllib.request.install_opener(opener)
-resp = opener.open('https://www.airbnb.com/s/New-York--NY')
-data = resp.read().decode('utf-8')
-print(data)
-
-
-'''
-
-#keep trying
-
-url='https://www.airbnb.com/s/New-York--NY'
-
-from urllib.request import Request, urlopen
-
-req = Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-webpage = urlopen(req).read()
-
-#so this is the magic incantation!
-
-
-parser = MyHTMLParser()
-parser.feed(webpage.decode("utf8"))
-
-
-#and now we need to build a parser for each of the rooms
 
 class ParseRoom(HTMLParser):
 
@@ -95,7 +37,7 @@ class ParseRoom(HTMLParser):
 		self.mode="NONE"
 		self.price=None
 		self.data={}
-		self.dataTags={"Accomodates=2.2":"ACCOMODATES",
+		self.dataTags={"Accommodates=2.2":"ACCOMODATES",
 			"Bathrooms=2.2":"BATHROOMS",
 			"Bed type=2.2":"BED_TYPE",
 			"Bedrooms=2.2":"BEDROOMS",
@@ -128,6 +70,18 @@ class ParseRoom(HTMLParser):
 		amenities=listing['listing_amenities']
 		for amenity in amenities:
 			self.amenities[amenity['name']]=amenity['is_present']
+			
+			
+	def summarize(self):
+		out={}
+		out["price"]=self.price
+		for k,v in self.data.items():
+			out[k]=v
+		for k,v in self.amenities.items():
+			out["AMENITIY:"+k]=v
+		for k,v in self.scores.items():
+			out["SCORE:"+k]=v
+		return out
 		
 
 	def handle_starttag(self, tag, attrs):
@@ -163,11 +117,29 @@ class ParseRoom(HTMLParser):
 			self.mode="NONE"
 
 
-url2='https://www.airbnb.com/rooms/7734116'
-req = Request(url2, headers={'User-Agent': 'Mozilla/5.0'})
-webpage = urlopen(req).read()
-roomParser = ParseRoom()
-roomParser.feed(webpage.decode("utf8"))
+
+
+if __name__=="__main__":
+	
+
+	#open url for city page
+	url='https://www.airbnb.com/s/New-York--NY'
+	req = Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+	webpage = urlopen(req).read()
+
+	#parse city
+	cityParser = CityPageParser()
+	cityParser.feed(webpage.decode("utf8"))
+
+	#parse room
+	url2='https://www.airbnb.com/rooms/'+cityParser.rooms.pop()
+	req = Request(url2, headers={'User-Agent': 'Mozilla/5.0'})
+	webpage = urlopen(req).read()
+	roomParser = ParseRoom()
+	roomParser.feed(webpage.decode("utf8"))
+	
+	#output
+	print(roomParser.summarize())
 
 
 
